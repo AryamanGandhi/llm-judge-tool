@@ -122,12 +122,17 @@ Type a prompt and hit Submit — it will call 5 different models
 `MODELS` list in `app.py`) concurrently via OpenRouter, and display each
 model's response side by side, labeled by model name. If a model fails
 (e.g. a missing/invalid API key or an upstream error), only that model's
-card shows an error — the others still render normally. Picking the best
-response with an LLM judge will be added in a later PR.
+card shows an error — the others still render normally.
 
-
-
-
+Once all 5 responses come back, a separate **judge model**
+(`JUDGE_MODEL` in `app.py`, currently `openai/gpt-4o-mini`) is given the
+original prompt plus all of the successful responses and asked to pick
+the single best one, with a brief explanation. The judge's verdict is
+shown as a banner above the responses (🏆 winner + reasoning), and the
+winning model's card is highlighted with a badge. If the judge call
+itself fails or its output can't be parsed, the 5 responses are still
+shown as normal — you'll just see a small "Judge unavailable" note
+instead of a winner.
 
 ## Roadmap
 
@@ -138,12 +143,11 @@ The project is being built as a sequence of small, focused pull requests:
 3. ✅ Simple frontend
 4. ✅ Wire frontend to backend so a prompt returns a real response
 5. ✅ Frontend call triggers multiple models on the backend
-6. Evaluate the responses and pick the best one using an LLM judge
+6. ✅ Evaluate the responses and pick the best one using an LLM judge
 7. Build a test suite to evaluate system performance
 8. Iterate on prompts based on test results
-
-
 
 ## License
 
 TBD.
+
