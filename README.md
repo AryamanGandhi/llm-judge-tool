@@ -101,7 +101,28 @@ live call to OpenRouter and is automatically skipped if `OPENROUTER_API_KEY`
 is not set in the environment.
 
 Run instructions will continue to be filled in and kept up to date here as
-more functionality (frontend, multi-model calls, judge evaluation) is added.
+more functionality (multi-model calls, judge evaluation) is added.
+
+### Running the frontend
+
+A simple, static frontend (plain HTML/CSS/JS, no build step or framework)
+lives in `frontend/`. It currently has a text input, a submit button, and
+a placeholder response area — it does not call the backend yet (that's a
+future PR).
+
+To run it locally:
+
+```bash
+cd frontend
+python -m http.server 8000
+```
+
+Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
+(Alternatively, you can just open `frontend/index.html` directly in a
+browser, though serving it via `http.server` avoids any local-file
+restrictions some browsers apply.)
+
 
 
 ## Roadmap
@@ -110,7 +131,8 @@ The project is being built as a sequence of small, focused pull requests:
 
 1. ✅ README with project description + setup/run instructions
 2. ✅ Generic `call_llm` function to call any model via OpenRouter
-3. Simple frontend
+3. ✅ Simple frontend
+
 4. Wire frontend to backend so a prompt returns a real response
 5. Frontend call triggers multiple models on the backend
 6. Evaluate the responses and pick the best one using an LLM judge
