@@ -123,3 +123,56 @@ h1 {
   color: #b91c1c;
 }
 
+.judgment-output:empty {
+  display: none;
+}
+
+.judgment-banner {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+}
+
+.judgment-banner__title {
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 0.35rem;
+}
+
+.judgment-banner__reasoning {
+  color: #78350f;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.judgment-banner--error {
+  background: #fff5f5;
+  border-color: #f3b8b8;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.model-card--winner {
+  border-color: #f5b301;
+  box-shadow: 0 0 0 2px rgba(245, 179, 1, 0.35);
+}
+
+.model-card--winner h3 {
+  color: #92400e;
+}
+
+.winner-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  background: #f5b301;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+
