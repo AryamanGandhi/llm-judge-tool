@@ -82,3 +82,44 @@ h1 {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.model-card {
+  padding: 0.85rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.model-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #2563eb;
+  word-break: break-word;
+}
+
+.model-card__body {
+  white-space: pre-wrap;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.model-card--error {
+  border-color: #f3b8b8;
+  background: #fff5f5;
+}
+
+.model-card--error h3 {
+  color: #b91c1c;
+}
+
+.model-card--error .model-card__body {
+  color: #b91c1c;
+}
+

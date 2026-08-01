@@ -97,11 +97,14 @@ pytest
 
 This runs `test_llm.py` (covering `call_llm`: a successful call, an invalid
 model name, and a missing API key) and `test_app.py` (covering the
-`/api/generate` backend endpoint: a valid prompt, an empty prompt, a
-missing prompt field, and an upstream error). The backend tests mock
-`call_llm`, so they run fast and don't require a real API key or network
-access. The one live test in `test_llm.py` makes a real call to OpenRouter
-and is automatically skipped if `OPENROUTER_API_KEY` is not set.
+`/api/generate` backend endpoint: all 5 models are called concurrently for
+a valid prompt, one model failing doesn't break the others, an empty
+prompt, a missing prompt field, and an unexpected exception from one
+model). The backend tests mock `call_llm`, so they run fast and don't
+require a real API key or network access. The one live test in
+`test_llm.py` makes a real call to OpenRouter and is automatically skipped
+if `OPENROUTER_API_KEY` is not set.
+
 
 ### Running the app (frontend + backend together)
 
@@ -114,11 +117,14 @@ python app.py
 ```
 
 Then open [http://localhost:5000](http://localhost:5000) in your browser.
-Type a prompt and hit Submit — it will call a single hardcoded model
-(`openai/gpt-4o-mini`) via OpenRouter and display the real response (or a
-clear error message if something goes wrong, e.g. a missing/invalid API
-key). Calling multiple models and picking the best one with a judge model
-will be added in later PRs.
+Type a prompt and hit Submit — it will call 5 different models
+(a mix of OpenAI, Anthropic, Google, Meta, and Mistral models, see the
+`MODELS` list in `app.py`) concurrently via OpenRouter, and display each
+model's response side by side, labeled by model name. If a model fails
+(e.g. a missing/invalid API key or an upstream error), only that model's
+card shows an error — the others still render normally. Picking the best
+response with an LLM judge will be added in a later PR.
+
 
 
 
@@ -131,11 +137,11 @@ The project is being built as a sequence of small, focused pull requests:
 2. ✅ Generic `call_llm` function to call any model via OpenRouter
 3. ✅ Simple frontend
 4. ✅ Wire frontend to backend so a prompt returns a real response
-
-5. Frontend call triggers multiple models on the backend
+5. ✅ Frontend call triggers multiple models on the backend
 6. Evaluate the responses and pick the best one using an LLM judge
 7. Build a test suite to evaluate system performance
 8. Iterate on prompts based on test results
+
 
 
 ## License
