@@ -21,8 +21,8 @@ from llm import call_llm
 # list does not require any other code changes.
 MODELS = [
     "openai/gpt-4o-mini",
-    "anthropic/claude-3.5-haiku",
-    "google/gemini-2.0-flash-001",
+    "anthropic/claude-3-haiku",
+    "google/gemini-2.5-flash-lite",
     "meta-llama/llama-3.1-8b-instruct",
     "mistralai/mistral-small-3.1-24b-instruct",
 ]
@@ -81,4 +81,3 @@ def generate():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
