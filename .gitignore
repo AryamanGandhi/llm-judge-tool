@@ -1,4 +1,3 @@
-
 # Byte-compiled / cache
 __pycache__/
 *.py[cod]
@@ -25,3 +24,6 @@ dist/
 
 # OS
 .DS_Store
+
+# Eval script output (generated, not source)
+eval_results/

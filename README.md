@@ -134,6 +134,59 @@ itself fails or its output can't be parsed, the 5 responses are still
 shown as normal — you'll just see a small "Judge unavailable" note
 instead of a winner.
 
+### Running the evaluation suite
+
+While `pytest` (above) checks that the code doesn't crash, `run_eval.py`
+measures whether the **judge is actually good at its job** — i.e. does
+it consistently pick sensible winners across a variety of task types.
+
+```bash
+python run_eval.py            # real run, hits OpenRouter (uses API credits)
+python run_eval.py --mock     # fast, free dry run using canned fake
+                               # responses — useful for sanity-checking
+                               # the eval script itself
+python run_eval.py --output eval_results/my_run.json   # custom output path
+```
+
+What it does:
+
+1. Runs the full 5-model + judge pipeline (same code as the app) against
+   a fixed set of ~12 prompts in `eval_prompts.py`, covering coding,
+   factual/reasoning, and writing tasks.
+2. For the first 5 prompts, re-runs *just* the judge step a second time
+   on the same 5 responses, to check whether the judge picks the same
+   winner both times (a self-consistency check).
+3. Writes full per-prompt results (every model's response, the judge's
+   winner + reasoning, and the consistency check outcome) to a timestamped
+   JSON file under `eval_results/` (gitignored — this is generated output,
+   not something to commit).
+4. Prints a summary: how many times each model won overall, and the
+   judge's self-consistency rate.
+
+Example summary output from a real run:
+
+```
+=== Eval Summary ===
+Prompts evaluated: 12
+Prompts successfully judged: 12
+
+Wins per model:
+  anthropic/claude-3-haiku: 6
+  openai/gpt-4o-mini: 3
+  google/gemini-2.5-flash-lite: 3
+
+Judge self-consistency: 5 checks run, 80% consistent
+```
+
+A consistency rate below 100% is expected and informative — it means the
+judge occasionally flips its pick when re-evaluating identical responses,
+which is useful signal for tuning the judge prompt in a future PR (see
+Roadmap item 8).
+
+`test_run_eval.py` covers the script's own aggregation logic
+(`summarize`, `check_judge_consistency`) with hand-constructed mock
+results, so those tests are fast and don't touch the network at all.
+
 ## Roadmap
 
 The project is being built as a sequence of small, focused pull requests:
@@ -144,10 +197,11 @@ The project is being built as a sequence of small, focused pull requests:
 4. ✅ Wire frontend to backend so a prompt returns a real response
 5. ✅ Frontend call triggers multiple models on the backend
 6. ✅ Evaluate the responses and pick the best one using an LLM judge
-7. Build a test suite to evaluate system performance
+7. ✅ Build a test suite (`run_eval.py`) to evaluate system performance
 8. Iterate on prompts based on test results
 
 ## License
 
 TBD.
+
 
