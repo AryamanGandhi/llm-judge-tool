@@ -95,33 +95,31 @@ python -c "from llm import call_llm; print(call_llm('openai/gpt-4o-mini', 'Say h
 pytest
 ```
 
-This runs `test_llm.py`, which covers a successful call, an invalid model
-name, and a missing API key. The "valid response" test makes a real,
-live call to OpenRouter and is automatically skipped if `OPENROUTER_API_KEY`
-is not set in the environment.
+This runs `test_llm.py` (covering `call_llm`: a successful call, an invalid
+model name, and a missing API key) and `test_app.py` (covering the
+`/api/generate` backend endpoint: a valid prompt, an empty prompt, a
+missing prompt field, and an upstream error). The backend tests mock
+`call_llm`, so they run fast and don't require a real API key or network
+access. The one live test in `test_llm.py` makes a real call to OpenRouter
+and is automatically skipped if `OPENROUTER_API_KEY` is not set.
 
-Run instructions will continue to be filled in and kept up to date here as
-more functionality (multi-model calls, judge evaluation) is added.
+### Running the app (frontend + backend together)
 
-### Running the frontend
-
-A simple, static frontend (plain HTML/CSS/JS, no build step or framework)
-lives in `frontend/`. It currently has a text input, a submit button, and
-a placeholder response area — it does not call the backend yet (that's a
-future PR).
-
-To run it locally:
+The backend is a small Flask app (`app.py`) that exposes a
+`POST /api/generate` endpoint and also serves the frontend, so you can run
+everything from a single server:
 
 ```bash
-cd frontend
-python -m http.server 8000
+python app.py
 ```
 
-Then open [http://localhost:8000](http://localhost:8000) in your browser.
+Then open [http://localhost:5000](http://localhost:5000) in your browser.
+Type a prompt and hit Submit — it will call a single hardcoded model
+(`openai/gpt-4o-mini`) via OpenRouter and display the real response (or a
+clear error message if something goes wrong, e.g. a missing/invalid API
+key). Calling multiple models and picking the best one with a judge model
+will be added in later PRs.
 
-(Alternatively, you can just open `frontend/index.html` directly in a
-browser, though serving it via `http.server` avoids any local-file
-restrictions some browsers apply.)
 
 
 
@@ -132,8 +130,8 @@ The project is being built as a sequence of small, focused pull requests:
 1. ✅ README with project description + setup/run instructions
 2. ✅ Generic `call_llm` function to call any model via OpenRouter
 3. ✅ Simple frontend
+4. ✅ Wire frontend to backend so a prompt returns a real response
 
-4. Wire frontend to backend so a prompt returns a real response
 5. Frontend call triggers multiple models on the backend
 6. Evaluate the responses and pick the best one using an LLM judge
 7. Build a test suite to evaluate system performance
