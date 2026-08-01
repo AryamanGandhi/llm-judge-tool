@@ -54,41 +54,69 @@ etc.) without needing separate API keys/integrations for each one.
    pip install -r requirements.txt
    ```
 
-   > Note: `requirements.txt` will be added in an upcoming PR once the first
-   > dependencies (e.g. the OpenRouter client) are introduced.
-
 4. Set your OpenRouter API key as an environment variable:
+
+   Copy the example env file and fill in your real key:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then edit `.env` and replace the placeholder with your real key:
+
+   ```
+   OPENROUTER_API_KEY=your-openrouter-api-key-here
+   ```
+
+   `.env` is listed in `.gitignore` so your real key is never committed.
+   You can get an API key by signing up at [openrouter.ai](https://openrouter.ai)
+   and creating a key from your account dashboard.
+
+   Alternatively, you can export it directly in your shell instead of using
+   a `.env` file:
 
    ```bash
    export OPENROUTER_API_KEY="your-openrouter-api-key-here"
    ```
 
-   You can get an API key by signing up at [openrouter.ai](https://openrouter.ai)
-   and creating a key from your account dashboard.
-
-   To avoid re-exporting it every time, you can add the line above to your
-   shell profile (e.g. `~/.zshrc`) or use a local `.env` file (not committed
-   to git — see `.gitignore`).
-
 ## Running the project
 
-This project is under active, incremental development. Run instructions will
-be filled in and kept up to date here as functionality is added — starting
-with a basic script/CLI that calls a single model, and eventually a frontend
-that triggers multiple models and returns the judge's chosen response.
+This project is under active, incremental development. So far it includes a
+generic `call_llm(model, prompt)` function (in `llm.py`) for calling any
+model supported by OpenRouter. You can try it out directly:
+
+```bash
+python -c "from llm import call_llm; print(call_llm('openai/gpt-4o-mini', 'Say hi in 3 words.'))"
+```
+
+### Running tests
+
+```bash
+pytest
+```
+
+This runs `test_llm.py`, which covers a successful call, an invalid model
+name, and a missing API key. The "valid response" test makes a real,
+live call to OpenRouter and is automatically skipped if `OPENROUTER_API_KEY`
+is not set in the environment.
+
+Run instructions will continue to be filled in and kept up to date here as
+more functionality (frontend, multi-model calls, judge evaluation) is added.
+
 
 ## Roadmap
 
 The project is being built as a sequence of small, focused pull requests:
 
 1. ✅ README with project description + setup/run instructions
-2. Generic `call_llm` function to call any model via OpenRouter
+2. ✅ Generic `call_llm` function to call any model via OpenRouter
 3. Simple frontend
 4. Wire frontend to backend so a prompt returns a real response
 5. Frontend call triggers multiple models on the backend
 6. Evaluate the responses and pick the best one using an LLM judge
 7. Build a test suite to evaluate system performance
 8. Iterate on prompts based on test results
+
 
 ## License
 
