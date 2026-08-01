@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Judge Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>LLM Judge Tool</h1>
+    <p class="subtitle">
+      Enter a prompt below. It will be sent to several LLMs, and a judge
+      model will pick the best response.
+    </p>
+
+    <form id="prompt-form">
+      <label for="prompt-input" class="visually-hidden">Prompt</label>
+      <input
+        type="text"
+        id="prompt-input"
+        name="prompt"
+        placeholder="Type your prompt here..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit" id="submit-button">Submit</button>
+    </form>
+
+    <section id="response-section">
+      <h2>Response</h2>
+      <div id="response-output" class="response-output">
+        Your response will appear here.
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
