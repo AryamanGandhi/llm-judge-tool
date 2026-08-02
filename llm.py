@@ -8,6 +8,7 @@ given model via OpenRouter and returns the model's text response.
 """
 
 import os
+from typing import Optional
 
 import requests
 from dotenv import load_dotenv
@@ -21,7 +22,12 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT_SECONDS = 30
 
 
-def call_llm(model: str, prompt: str, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> str:
+def call_llm(
+    model: str,
+    prompt: str,
+    timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    temperature: Optional[float] = None,
+) -> str:
     """Call any model supported by OpenRouter with a single prompt.
 
     Args:
@@ -30,6 +36,11 @@ def call_llm(model: str, prompt: str, timeout: int = DEFAULT_TIMEOUT_SECONDS) ->
             for the full list of supported models.
         prompt: The user prompt/message to send to the model.
         timeout: Max number of seconds to wait for a response.
+        temperature: Optional sampling temperature to forward to
+            OpenRouter (0.0 = most deterministic, higher = more random).
+            If omitted, the provider's own default is used. Useful for
+            callers (like an LLM judge) that want more consistent,
+            repeatable outputs.
 
     Returns:
         The model's text response as a string. If something goes wrong
@@ -57,6 +68,8 @@ def call_llm(model: str, prompt: str, timeout: int = DEFAULT_TIMEOUT_SECONDS) ->
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
     }
+    if temperature is not None:
+        payload["temperature"] = temperature
 
     try:
         response = requests.post(

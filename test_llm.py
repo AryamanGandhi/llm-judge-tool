@@ -65,3 +65,31 @@ def test_call_llm_handles_empty_prompt_without_crashing():
 
     assert isinstance(result, str)
     assert result.startswith("Error:")
+
+
+def test_call_llm_includes_temperature_in_payload_when_given(monkeypatch):
+    """When a temperature is passed, it should be forwarded to OpenRouter
+    in the JSON payload (used by the judge to get more consistent
+    results). When omitted, the payload should not include the key at
+    all, letting the provider's own default apply."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake-key-for-test")
+
+    captured_payloads = []
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured_payloads.append(json)
+        return FakeResponse()
+
+    monkeypatch.setattr("llm.requests.post", fake_post)
+
+    call_llm(VALID_TEST_MODEL, "Hello", temperature=0.0)
+    call_llm(VALID_TEST_MODEL, "Hello")
+
+    assert captured_payloads[0]["temperature"] == 0.0
+    assert "temperature" not in captured_payloads[1]
