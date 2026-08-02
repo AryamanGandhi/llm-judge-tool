@@ -21,12 +21,21 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # How long to wait (in seconds) for OpenRouter to respond before giving up.
 DEFAULT_TIMEOUT_SECONDS = 30
 
+# Default cap on how many tokens a model is allowed to generate per call.
+# Some providers/models default to a very large max_tokens (e.g. tens of
+# thousands) if none is specified, which can exceed what a given
+# OpenRouter account's credit balance can afford (returning a 402 Payment
+# Required error) and unnecessarily drives up cost. 1000 tokens is plenty
+# for the kinds of prompts this tool is used for.
+DEFAULT_MAX_TOKENS = 1000
+
 
 def call_llm(
     model: str,
     prompt: str,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
     temperature: Optional[float] = None,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> str:
     """Call any model supported by OpenRouter with a single prompt.
 
@@ -41,6 +50,11 @@ def call_llm(
             If omitted, the provider's own default is used. Useful for
             callers (like an LLM judge) that want more consistent,
             repeatable outputs.
+        max_tokens: Max number of tokens the model may generate in its
+            response. Defaults to DEFAULT_MAX_TOKENS to keep responses a
+            reasonable size and avoid relying on a given model/provider's
+            own (sometimes very large) default, which can exceed what an
+            account's credit balance can afford.
 
     Returns:
         The model's text response as a string. If something goes wrong
@@ -67,6 +81,7 @@ def call_llm(
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
     }
     if temperature is not None:
         payload["temperature"] = temperature

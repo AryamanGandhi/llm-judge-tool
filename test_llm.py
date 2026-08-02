@@ -93,3 +93,33 @@ def test_call_llm_includes_temperature_in_payload_when_given(monkeypatch):
 
     assert captured_payloads[0]["temperature"] == 0.0
     assert "temperature" not in captured_payloads[1]
+
+
+def test_call_llm_caps_max_tokens_by_default(monkeypatch):
+    """call_llm should always send a max_tokens value to OpenRouter (a
+    sane default if the caller doesn't specify one), so that models which
+    would otherwise default to a very large max_tokens don't blow past
+    what the account's credit balance can afford."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake-key-for-test")
+
+    captured_payloads = []
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured_payloads.append(json)
+        return FakeResponse()
+
+    monkeypatch.setattr("llm.requests.post", fake_post)
+
+    call_llm(VALID_TEST_MODEL, "Hello")
+    call_llm(VALID_TEST_MODEL, "Hello", max_tokens=250)
+
+    from llm import DEFAULT_MAX_TOKENS
+
+    assert captured_payloads[0]["max_tokens"] == DEFAULT_MAX_TOKENS
+    assert captured_payloads[1]["max_tokens"] == 250
