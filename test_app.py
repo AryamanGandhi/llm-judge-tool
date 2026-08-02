@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app import JUDGE_MODEL, MODELS, app
+from app import JUDGE_MODEL, JUDGE_TEMPERATURE, MODELS, app, judge_responses
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def client():
 
 
 def test_generate_calls_all_models_and_returns_response_for_each(client):
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == JUDGE_MODEL and model not in MODELS:
             return json.dumps({"winner_index": 0, "reasoning": "It's fine."})
         return "A response."
@@ -48,7 +48,7 @@ def test_generate_calls_all_models_and_returns_response_for_each(client):
 def test_generate_handles_one_model_failing_without_breaking_others(client):
     failing_model = MODELS[0]
 
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == failing_model:
             return "Error: something went wrong with this model."
         if model == JUDGE_MODEL:
@@ -96,7 +96,7 @@ def test_generate_handles_unexpected_exception_from_one_model(client):
     the whole request — it should show up as an error for that model."""
     failing_model = MODELS[0]
 
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == failing_model:
             raise RuntimeError("boom")
         if model == JUDGE_MODEL:
@@ -120,7 +120,7 @@ def test_generate_judge_picks_a_winner_from_mocked_responses(client):
     response and translate it into the corresponding model's name, along
     with the reasoning string."""
 
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == JUDGE_MODEL:
             # Candidates are indexed in MODELS order; pick index 2.
             return json.dumps(
@@ -145,7 +145,7 @@ def test_generate_judge_failure_does_not_break_the_request(client):
     5 responses should still be returned, with the judgment marked as
     failed rather than the whole request erroring out."""
 
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == JUDGE_MODEL and model not in MODELS:
             return "Error: judge model is temporarily unavailable."
         return f"Response from {model}"
@@ -171,7 +171,7 @@ def test_generate_judge_handles_malformed_json_response(client):
     should fail gracefully (an error, no winner) rather than raising and
     crashing the whole request."""
 
-    def fake_call_llm(model, prompt):
+    def fake_call_llm(model, prompt, **kwargs):
         if model == JUDGE_MODEL:
             return "I think response 2 is best, no JSON here!"
         return f"Response from {model}"
@@ -185,3 +185,47 @@ def test_generate_judge_handles_malformed_json_response(client):
     judgment = data["judgment"]
     assert judgment["winner"] is None
     assert judgment["error"] is not None
+
+
+def test_judge_prompt_includes_structured_criteria_and_tie_break_rule():
+    """The judge prompt should spell out concrete evaluation criteria and
+    an explicit tie-breaking rule, since a vague holistic ask and the lack
+    of a tie-break rule were identified as sources of judge
+    inconsistency. This locks in that structure so it isn't accidentally
+    regressed back to a vague prompt."""
+    from app import _build_judge_prompt
+
+    results = [
+        {"model": "model-a", "response": "Response A text.", "error": None},
+        {"model": "model-b", "response": "Response B text.", "error": None},
+    ]
+
+    judge_prompt, candidates = _build_judge_prompt("Some prompt", results)
+
+    assert len(candidates) == 2
+    lowered = judge_prompt.lower()
+    assert "correctness" in lowered
+    assert "completeness" in lowered
+    assert "clarity" in lowered
+    assert "tie" in lowered
+    assert "lower index" in lowered
+
+
+def test_judge_call_uses_low_temperature_for_consistency():
+    """The judge call should pass JUDGE_TEMPERATURE through to call_llm so
+    the judge's picks are more repeatable across identical inputs."""
+    captured_kwargs = {}
+
+    def fake_call_llm(model, prompt, **kwargs):
+        captured_kwargs.update(kwargs)
+        if model == JUDGE_MODEL:
+            return json.dumps({"winner_index": 0, "reasoning": "Fine."})
+        return "A response."
+
+    with patch("app.call_llm", side_effect=fake_call_llm):
+        results = [
+            {"model": m, "response": "A response.", "error": None} for m in MODELS
+        ]
+        judge_responses("Say hi", results)
+
+    assert captured_kwargs.get("temperature") == JUDGE_TEMPERATURE

@@ -31,6 +31,12 @@ MODELS = [
 # itself as part of the pool of candidates.
 JUDGE_MODEL = "openai/gpt-4o-mini"
 
+# Sampling temperature used for the judge call. Judging is meant to be a
+# consistent, repeatable evaluation rather than a creative task, so we use
+# a low (near-zero) temperature to reduce run-to-run variance in which
+# response the judge picks for the same set of candidates.
+JUDGE_TEMPERATURE = 0.0
+
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 
 app = Flask(__name__, static_folder=None)
@@ -76,6 +82,14 @@ def _build_judge_prompt(prompt: str, results: list):
     model name) so the judge evaluates responses on merit rather than any
     bias toward/against a particular model's name. Returns a tuple of
     (judge_prompt_text, candidates_list).
+
+    The prompt lays out explicit, structured evaluation criteria (rather
+    than asking for a single vague holistic judgment) plus an explicit
+    tie-breaking rule, since both are common sources of run-to-run
+    inconsistency for LLM judges: without concrete criteria to anchor on,
+    a judge can weigh things differently across repeated calls, and
+    without a tie-break rule, near-identical responses get an effectively
+    arbitrary/random pick each time.
     """
     candidates = [r for r in results if r["error"] is None]
 
@@ -85,15 +99,35 @@ def _build_judge_prompt(prompt: str, results: list):
     candidates_text = "\n\n".join(sections)
 
     judge_prompt_text = (
-        "You are an impartial judge evaluating multiple AI assistant "
-        "responses to the same user prompt. Pick the single best response "
-        "and briefly explain why.\n\n"
+        "You are an impartial, consistent judge evaluating multiple AI "
+        "assistant responses to the same user prompt. Your goal is to "
+        "reach the same conclusion every time you evaluate the same set "
+        "of responses, so be systematic rather than relying on a vague "
+        "overall impression.\n\n"
+        "Evaluate each response against these criteria, in this priority "
+        "order:\n"
+        "1. Correctness: Is the response factually and logically accurate? "
+        "A response with a factual or logical error should generally lose "
+        "to a correct one, regardless of style.\n"
+        "2. Completeness: Does it fully address every part of the "
+        "prompt, without missing requested details or steps?\n"
+        "3. Clarity: Is it well-organized, easy to follow, and free of "
+        "unnecessary confusion or verbosity?\n\n"
+        "Work through the criteria in order for each response before "
+        "deciding. If, after considering all three criteria, two or more "
+        "responses are still effectively tied, break the tie by choosing "
+        "the response with the lower index number (e.g. prefer Response 0 "
+        "over Response 1 if they are equally good). Do not pick a "
+        "response as the winner solely because of its length, tone, or "
+        "formatting flourishes if a shorter/plainer response is equally "
+        "correct and complete.\n\n"
         f"User prompt:\n{prompt}\n\n"
         f"Candidate responses:\n\n{candidates_text}\n\n"
         "Respond with ONLY a JSON object (no other text, no markdown "
         "fences) in exactly this format:\n"
         '{"winner_index": <integer index of the best response>, '
-        '"reasoning": "<one or two sentence explanation>"}'
+        '"reasoning": "<one or two sentence explanation citing the '
+        'deciding criterion>"}'
     )
     return judge_prompt_text, candidates
 
@@ -135,7 +169,7 @@ def judge_responses(prompt: str, results: list) -> dict:
         }
 
     try:
-        raw = call_llm(JUDGE_MODEL, judge_prompt)
+        raw = call_llm(JUDGE_MODEL, judge_prompt, temperature=JUDGE_TEMPERATURE)
     except Exception as exc:  # pragma: no cover - defensive fallback
         return {
             "winner": None,

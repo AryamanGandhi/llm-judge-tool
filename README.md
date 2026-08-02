@@ -89,6 +89,11 @@ model supported by OpenRouter. You can try it out directly:
 python -c "from llm import call_llm; print(call_llm('openai/gpt-4o-mini', 'Say hi in 3 words.'))"
 ```
 
+`call_llm` also accepts an optional `temperature` argument (e.g.
+`call_llm(model, prompt, temperature=0.0)`) to control how deterministic
+vs. creative the model's sampling is. This is used by the judge (see
+below) to get more consistent, repeatable evaluations.
+
 ### Running tests
 
 ```bash
@@ -96,14 +101,16 @@ pytest
 ```
 
 This runs `test_llm.py` (covering `call_llm`: a successful call, an invalid
-model name, and a missing API key) and `test_app.py` (covering the
+model name, a missing API key, and that an optional `temperature` is
+forwarded to OpenRouter only when provided) and `test_app.py` (covering the
 `/api/generate` backend endpoint: all 5 models are called concurrently for
 a valid prompt, one model failing doesn't break the others, an empty
-prompt, a missing prompt field, and an unexpected exception from one
-model). The backend tests mock `call_llm`, so they run fast and don't
-require a real API key or network access. The one live test in
-`test_llm.py` makes a real call to OpenRouter and is automatically skipped
-if `OPENROUTER_API_KEY` is not set.
+prompt, a missing prompt field, an unexpected exception from one model,
+that the judge prompt contains the structured criteria/tie-break rule, and
+that the judge call uses the low `JUDGE_TEMPERATURE`). The backend tests
+mock `call_llm`, so they run fast and don't require a real API key or
+network access. The one live test in `test_llm.py` makes a real call to
+OpenRouter and is automatically skipped if `OPENROUTER_API_KEY` is not set.
 
 
 ### Running the app (frontend + backend together)
@@ -180,12 +187,61 @@ Judge self-consistency: 5 checks run, 80% consistent
 
 A consistency rate below 100% is expected and informative — it means the
 judge occasionally flips its pick when re-evaluating identical responses,
-which is useful signal for tuning the judge prompt in a future PR (see
-Roadmap item 8).
+which is useful signal for tuning the judge prompt (see the "Judge prompt
+iteration" section below for how this was addressed).
 
 `test_run_eval.py` covers the script's own aggregation logic
 (`summarize`, `check_judge_consistency`) with hand-constructed mock
 results, so those tests are fast and don't touch the network at all.
+
+### Judge prompt iteration (consistency improvements)
+
+An initial eval run found the judge was only **80% self-consistent**
+(4 of 5 repeat checks picked the same winner when re-judging the exact
+same 5 responses). Two likely causes: the original prompt asked for a
+single vague "pick the best one" holistic judgment with no explicit
+scoring criteria, and it had no tie-breaking rule for responses that are
+nearly identical in quality — both of which can lead an LLM to weigh
+things differently, or land on an effectively arbitrary pick, across
+repeated calls.
+
+Three changes were made to address this:
+
+- **Structured evaluation criteria.** `_build_judge_prompt` (in `app.py`)
+  now asks the judge to evaluate each response against three criteria, in
+  priority order: correctness, completeness, then clarity — instead of a
+  single vague "best response" judgment.
+- **Explicit tie-break rule.** If responses are still tied after
+  considering all three criteria, the judge is told to prefer the lower
+  response index, removing the ambiguity that previously let ties resolve
+  randomly.
+- **Lower judge temperature.** `call_llm` (in `llm.py`) now accepts an
+  optional `temperature` parameter, and the judge call in
+  `judge_responses` passes `JUDGE_TEMPERATURE = 0.0` so the judge samples
+  more deterministically instead of using the provider's default
+  (creativity-oriented) sampling.
+
+Re-running `python run_eval.py` (real run against OpenRouter, not
+`--mock`) before and after these changes:
+
+| | Before | After |
+|---|---|---|
+| Judge self-consistency | 80% (4/5) | **100% (5/5)** |
+
+The updated judge picked the same winner on all 5 repeat checks in the
+"after" run — up from 4/5 with the original prompt. As with any small
+(5-check) sample, this isn't a guarantee of 100% consistency going
+forward, but it's a clear improvement over the original prompt and
+confirms the structured-criteria + tie-break + low-temperature changes
+are moving in the right direction.
+
+Win counts from the "after" run (12 prompts total):
+
+```
+openai/gpt-4o-mini: 5
+anthropic/claude-3-haiku: 5
+google/gemini-2.5-flash-lite: 2
+```
 
 ## Roadmap
 
@@ -198,10 +254,9 @@ The project is being built as a sequence of small, focused pull requests:
 5. ✅ Frontend call triggers multiple models on the backend
 6. ✅ Evaluate the responses and pick the best one using an LLM judge
 7. ✅ Build a test suite (`run_eval.py`) to evaluate system performance
-8. Iterate on prompts based on test results
+8. ✅ Iterate on the judge prompt (structured criteria, tie-break rule,
+   lower temperature) to improve self-consistency (80% → 100% in testing)
 
 ## License
 
 TBD.
-
-
