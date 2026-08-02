@@ -123,7 +123,7 @@ everything from a single server:
 python app.py
 ```
 
-Then open [http://localhost:5000](http://localhost:5000) in your browser.
+Then open [http://localhost:5001](http://localhost:5001) in your browser.
 Type a prompt and hit Submit — it will call 5 different models
 (a mix of OpenAI, Anthropic, Google, Meta, and Mistral models, see the
 `MODELS` list in `app.py`) concurrently via OpenRouter, and display each
